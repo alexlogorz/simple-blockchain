@@ -5,30 +5,59 @@ const server = new WS.Server({ port: PORT });
 const MY_ADDRESS = `ws://localhost:${PORT}`;
 const peers = ['ws://localhost:3000'];
 const handshakes = [];
-let hasVoted = false;
-const surveyResults = { accepted: 0, rejected: 0 };
+const arrayOfChains = [];
+const { Block, BlockChain, Transaction } = require('./pupCoin');
+let oldestValid = null;
 
 console.log('Listening on PORT', PORT);
 
 server.on('connection', async (socket, req) => {
     socket.on('message', message => {
         const _message = JSON.parse(message);
+
         switch(_message.type) {
             case 'HANDSHAKE':
                 console.log(_message);
                 connect(_message.address);
                 break;
-            case 'SURVEY':
-                castVote(_message);
-                break;
             case 'VOTE':
-                appendSurveyResults(_message.accepted);
+                _message.currentOldestValid.__proto__ = BlockChain.prototype;
+                if(_message.address != MY_ADDRESS) {
+                    if(oldestValid != null) {
+                        if(_message.currentOldestValid.getLatestBlock().timestamp < oldestValid.getLatestBlock().timestamp) {
+                            oldestValid = _message.currentOldestValid;
+                        }
+                    } else {
+                        oldestValid = _message.currentOldestValid;
+                    }
+                }
+                break;
+            case 'SURVEY':
+                if(_message.address != MY_ADDRESS) {
+                    let currentOldestValid = arrayOfChains[0];
+                    for(let i = 0; i < arrayOfChains.length; i++) {
+                        if(arrayOfChains[i].getLatestBlock().timestamp < currentOldestValid.getLatestBlock().timestamp) {
+                            currentOldestValid = arrayOfChains[i];
+                        }    
+                    }
+                    sendMessage({ type: 'VOTE', address: MY_ADDRESS, currentOldestValid }, _message.address);
+                }
+                break;
+            case 'PEER_CHAIN':
+                _message.pupCoin.__proto__ = BlockChain.prototype;
+                arrayOfChains.push(_message.pupCoin);
+                break;
+            case 'USER_PRGM_CHAIN':
+                _message.pupCoin.__proto__ = BlockChain.prototype;
+                _message.pupCoin.minePendingTransactions(MY_ADDRESS);
+                if(_message.pupCoin.isChainValid()) arrayOfChains.push(_message.pupCoin);
+                broadcast({type: 'PEER_CHAIN', address: MY_ADDRESS, pupCoin: _message.pupCoin});
                 break;
         }
     });
 });
 
-async function connect(address) {
+function connect(address) {
     if(!handshakes.find(peer => peer.address === address)) {
         const socket = new WS(address);
         socket.on('open', () => {
@@ -36,24 +65,6 @@ async function connect(address) {
             socket.send(JSON.stringify({ type: 'HANDSHAKE', address: MY_ADDRESS }));
         });
     }
-}
-
-function castVote(message) {
-    const { number, address } = message;
-    if(!hasVoted) {
-        if(number >= 0)
-            sendMessage({ type: 'VOTE', accepted: true }, address);
-        else
-            sendMessage({ type: 'VOTE', accepted: false }, address);
-        hasVoted = true;
-    }
-}
-
-function appendSurveyResults(accepted) {
-    if(accepted)
-        surveyResults.accepted += 1;
-    else
-        surveyResults.rejected += 1;
 }
 
 function sendMessage(message, address) {
@@ -69,10 +80,8 @@ function broadcast(message) {
 }
 
 function surveyTimer(delay) {
-    const { accepted, rejected } = surveyResults;
     setTimeout(() => {
-        const results = (accepted > rejected) ? true : false;
-        console.log('Survey results', results);
+        console.log('Survey results', surveyResults);
     }, delay);
 }
 

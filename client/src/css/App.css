@@ -1,0 +1,40 @@
+body {
+    background-color: #2E3047;
+    display: flex;
+    justify-content: center;
+    margin-top: 20vh;
+}
+
+.box {
+    text-shadow: 1px 1px black;
+    background-color: #43455C;
+    padding:25px;
+    border-radius: 5px;
+}
+
+.box > div {
+    text-align: left;
+    margin-bottom:5px;
+}
+
+ul {
+    list-style-type: none;
+    padding-left:0px;
+    margin:0px;
+}
+
+ul li {
+    padding:5px;
+    padding-left:0px;
+    border-bottom: 1px solid #2E3047;
+}
+
+ul Button {
+   background-color: #2E3047 !important;
+   border: none !important;
+}
+
+ul Button:hover {
+    background-color: #cecece !important;
+    color: #43455C !important;
+ }

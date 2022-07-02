@@ -1,10 +1,10 @@
 const WS = require('ws');
-const PORT = 3001;
+const PORT = 3000;
 const server = new WS.Server({ port: PORT });
 const MY_ADDRESS = `ws://localhost:${PORT}`;
 const peers = [];
 const handshakes = [];
-let arrayOfChains = [];
+const arrayOfChains = [];
 const { Block, BlockChain, Transaction } = require('./pupCoin');
 
 console.log('Listening on PORT', PORT);
@@ -12,7 +12,6 @@ console.log('Listening on PORT', PORT);
 server.on('connection', async (socket, req) => {
     socket.on('message', message => {
         const _message = JSON.parse(message);
-        // console.log(_message)
         switch(_message.type) {
             case 'HANDSHAKE':
                 connect(_message.address);
@@ -30,8 +29,6 @@ server.on('connection', async (socket, req) => {
             //     }
             //     break;
             case 'SURVEY':
-                console.log('\x1b[33m%s\x1b[0m', '----ARRAY OF CHAINS----')
-                console.log(arrayOfChains)
                 if(_message.address != MY_ADDRESS) {
                     let currentOldestValid = arrayOfChains[0];
                     for(let i = 0; i < arrayOfChains.length; i++) {
@@ -47,9 +44,6 @@ server.on('connection', async (socket, req) => {
                 arrayOfChains.push(_message.pupCoin);
                 break;
             case 'USER_PRGM_CHAIN':
-                arrayOfChains = []
-                console.log('\x1b[33m%s\x1b[0m', '----ORIGINAL CHAIN----')
-                console.log(_message.pupCoin)
                 _message.pupCoin.__proto__ = BlockChain.prototype;
                 _message.pupCoin.minePendingTransactions(MY_ADDRESS);
                 if(_message.pupCoin.isChainValid()) arrayOfChains.push(_message.pupCoin);
@@ -67,18 +61,16 @@ function connect(address) {
         const socket = new WS(address);
         socket.on('open', () => {
             handshakes.push({ socket, address });
-            console.log({ type: 'HANDSHAKE', address });
-            if(address != 'ws://localhost:5000')
-                socket.send(JSON.stringify({ type: 'HANDSHAKE', address: MY_ADDRESS }));
+            // if(address != 5000)
+            //     socket.send(JSON.stringify({ type: 'HANDSHAKE', address: MY_ADDRESS }));
         });
     }
 }
 
 function sendMessage(message, address) {
-    const socket = new WS(address);
-    socket.on('open', () => {
-        socket.send(JSON.stringify(message));
-    });
+    handshakes.forEach(peer => {
+		if(peer.address === address) peer.socket.send(JSON.stringify(message));
+	})
 }
 
 async function broadcast(message) {

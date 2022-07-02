@@ -1,1 +1,3 @@
-"# simple-blockchain" 
+# simple-blockchain
+## How it works
+There is a GUI where the user can create initial fake transactions and send out the chain to the network. The nodes (miners) receive the chain, mine the transactions resulting in creating a new block added to the chain with their reward included. The miner then sends the chain to its peers which will store an array of chains in order to mitigate race conditions. The server will then send out a request to the network in order to determine the oldest most valid chain. This project was for learning more about blockchain technology and is not intended for real world use.
